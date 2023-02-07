@@ -24,42 +24,49 @@ namespace ChessBoardModel
 
         private void Update()
         {
+            OnMousePressed();
+        }
 
-            if (!currentCamera)
+        private void OnMousePressed()
+        {
+            if (Input.GetMouseButtonUp(0))
             {
-                currentCamera = Camera.main;
-                return;
-            }
-
-            RaycastHit info;
-            Ray ray = currentCamera.ScreenPointToRay(Input.mousePosition);
-
-            if (Physics.Raycast(ray, out info, 100, LayerMask.GetMask("Tile")))
-            {
-                //Get indexes of the tile we hit
-                Vector2Int hitPosition = LookupTileIndex(info.transform.gameObject);
-
-                //If we are hovering a tile after not hovering any tiles
-                if (currentHover == -Vector2Int.one)
+                if (!currentCamera)
                 {
-                    currentHover = hitPosition;
-                    tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
+                    currentCamera = Camera.main;
+                    return;
                 }
 
-                //If we were already hovering a tile, change the previous one
-                if (currentHover != hitPosition)
+                RaycastHit info;
+                Ray ray = currentCamera.ScreenPointToRay(Input.mousePosition);
+
+                if (Physics.Raycast(ray, out info, 100, LayerMask.GetMask("Tile")))
                 {
-                    tiles[currentHover.x, currentHover.y].layer = LayerMask.NameToLayer("Tile");
-                    currentHover = hitPosition;
-                    tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
+                    //Get indexes of the tile we hit
+                    Vector2Int hitPosition = LookupTileIndex(info.transform.gameObject);
+
+                    //If we are hovering a tile after not hovering any tiles
+                    if (currentHover == -Vector2Int.one)
+                    {
+                        currentHover = hitPosition;
+                        tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
+                    }
+
+                    //If we were already hovering a tile, change the previous one
+                    if (currentHover != hitPosition)
+                    {
+                        tiles[currentHover.x, currentHover.y].layer = LayerMask.NameToLayer("Tile");
+                        currentHover = hitPosition;
+                        tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
+                    }
                 }
-            }
-            else
-            {
-                if (currentHover != -Vector2Int.one)
+                else
                 {
-                    tiles[currentHover.x, currentHover.y].layer = LayerMask.NameToLayer("Tile");
-                    currentHover = -Vector2Int.one;
+                    if (currentHover != -Vector2Int.one)
+                    {
+                        tiles[currentHover.x, currentHover.y].layer = LayerMask.NameToLayer("Tile");
+                        currentHover = -Vector2Int.one;
+                    }
                 }
             }
         }
