@@ -7,7 +7,7 @@ public enum ChessPieceType
     Rook = 2,
     Knight = 3,
     Bishop = 4,
-    Qeen = 5,
+    Queen = 5,
     King = 6
 }
 
