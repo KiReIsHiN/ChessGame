@@ -15,8 +15,12 @@ namespace ChessBoardModel
         [SerializeField] private GameObject[] _prefabs;
         [SerializeField] private Material[] _teamMaterials;
 
+        [Header("Settings")]
+        [SerializeField] private float _speed;
+
         //LOGIC
         private ChessPiece[,] _chessPieces;
+        private ChessPiece _currentDragging;
         private const int TILE_COUNT_X = 8;
         private const int TILE_COUNT_Y = 8;
         private GameObject[,] _tiles;
@@ -25,6 +29,8 @@ namespace ChessBoardModel
 
         private Vector2Int _currentHover;
         private Vector3 _bounds;
+
+        private bool isSelected = false;
 
         private void Awake()
         {
@@ -37,49 +43,76 @@ namespace ChessBoardModel
 
         private void Update()
         {
+            if (!_currentCamera)
+            {
+                _currentCamera = Camera.main;
+                return;
+            }
+
             OnMousePressed();
         }
 
         private void OnMousePressed()
         {
-            if (Input.GetMouseButtonUp(0))
+            RaycastHit info;
+            Ray ray = _currentCamera.ScreenPointToRay(Input.mousePosition);
+
+            if (Physics.Raycast(ray, out info, 100, LayerMask.GetMask("Tile", "Hover")))
             {
-                if (!_currentCamera)
+                //Get indexes of the tile we hit
+                Vector2Int hitPosition = LookupTileIndex(info.transform.gameObject);
+
+                //If we are hovering a tile after not hovering any tiles
+                if (_currentHover == -Vector2Int.one)
                 {
-                    _currentCamera = Camera.main;
-                    return;
+                    _currentHover = hitPosition;
+                    _tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
                 }
 
-                RaycastHit info;
-                Ray ray = _currentCamera.ScreenPointToRay(Input.mousePosition);
-
-                if (Physics.Raycast(ray, out info, 100, LayerMask.GetMask("Tile")))
+                //If we were already hovering a tile, change the previous one
+                if (_currentHover != hitPosition)
                 {
-                    //Get indexes of the tile we hit
-                    Vector2Int hitPosition = LookupTileIndex(info.transform.gameObject);
+                    _tiles[_currentHover.x, _currentHover.y].layer = LayerMask.NameToLayer("Tile");
+                    _currentHover = hitPosition;
+                    _tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
+                }
 
-                    //If we are hovering a tile after not hovering any tiles
-                    if (_currentHover == -Vector2Int.one)
+                if (Input.GetMouseButtonDown(0))
+                {
+                    if (_chessPieces[hitPosition.x, hitPosition.y] != null)
                     {
-                        _currentHover = hitPosition;
-                        _tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
-                    }
-
-                    //If we were already hovering a tile, change the previous one
-                    if (_currentHover != hitPosition)
-                    {
-                        _tiles[_currentHover.x, _currentHover.y].layer = LayerMask.NameToLayer("Tile");
-                        _currentHover = hitPosition;
-                        _tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
+                        //We check if our turn?
+                        if (true)
+                        {
+                            //Do code here
+                            //We will get che ss on this cell and set his destination point
+                            _currentDragging = _chessPieces[hitPosition.x, hitPosition.y];
+                        }
                     }
                 }
-                else
+
+                //If we releasing the mouse button
+                if (_currentDragging != null && Input.GetMouseButtonUp(0))
                 {
-                    if (_currentHover != -Vector2Int.one)
+                    //We know the previous position of our chess
+                    Vector2Int previousPosition = new Vector2Int(_currentDragging.currentX, _currentDragging.currentY);
+                    bool validMove = MoveTo(_currentDragging, hitPosition.x, hitPosition.y);
+
+                    //If is not valid - we switch off our hoover
+                    if (!validMove)
                     {
-                        _tiles[_currentHover.x, _currentHover.y].layer = LayerMask.NameToLayer("Tile");
-                        _currentHover = -Vector2Int.one;
+                        _chessPieces[hitPosition.x, hitPosition.y].speed = _speed;
+                        _currentDragging.SetPosition(GetTileCenter(previousPosition.x,previousPosition.y));
+                        _currentDragging = null;
                     }
+                }
+            }
+            else
+            {
+                if (_currentHover != -Vector2Int.one)
+                {
+                    _tiles[_currentHover.x, _currentHover.y].layer = LayerMask.NameToLayer("Tile");
+                    _currentHover = -Vector2Int.one;
                 }
             }
         }
@@ -186,7 +219,7 @@ namespace ChessBoardModel
         {
             _chessPieces[x, y].currentX = x;
             _chessPieces[x, y].currentY = y;
-            _chessPieces[x, y].transform.position = GetTileCenter(x,y);
+            _chessPieces[x, y].SetPosition(GetTileCenter(x,y), force);
         }
 
         private Vector3 GetTileCenter(int x, int y)
@@ -203,6 +236,28 @@ namespace ChessBoardModel
                         return new Vector2Int(x, y);
 
             return -Vector2Int.one; //Invalid
+        }
+
+        private bool MoveTo(ChessPiece cp, int x, int y)
+        {
+            Vector2Int previousPosition = new Vector2Int(cp.currentX,cp.currentY);
+
+            if(_chessPieces[x,y] != null)
+            {
+                ChessPiece otherChessPiece = _chessPieces[x, y];
+
+                //If chess is ours then return nothing
+                if(cp.team == otherChessPiece.team)
+                    return false;
+            }
+
+            _chessPieces[x, y] = cp;
+            _chessPieces[previousPosition.x, previousPosition.y] = null;
+
+
+            PositioningSinglePiece(x, y);
+
+            return true;
         }
 
     }//End class
